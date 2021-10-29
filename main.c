@@ -5,16 +5,6 @@
 
 #define EXPORT_DIR "csv"
 
-char *filepath(char *filename)
-{
-    char *str = malloc(300 * sizeof(char));
-    strcpy(str, EXPORT_DIR);
-    strcat(str, "/");
-    strcat(str, filename);
-    printf("Scrivo su: %s\n", str);
-    return str;
-}
-
 typedef struct OSCILLATOR
 {
     /*
@@ -28,7 +18,20 @@ typedef struct OSCILLATOR
     double m, k, v0, x0, E0, w2;
 } OSCILLATOR;
 
-char *(*f)(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all);
+char *filepath(char *filename)
+{
+    char *str = malloc(300 * sizeof(char));
+    strcpy(str, EXPORT_DIR);
+    strcat(str, "/");
+    strcat(str, filename);
+    printf("Scrivo su: %s\n", str);
+    return str;
+}
+
+void printOscillator(OSCILLATOR *osc)
+{
+    printf("\toscillator: m=%f, k=%f, v0=%f, x0=%f, E0=%f, we=%f\n", osc->m, osc->k, osc->v0, osc->x0, osc->E0, osc->w2);
+}
 
 double acc(OSCILLATOR *osc, double x, double dt)
 {
@@ -39,15 +42,26 @@ double getMechanicalEnergy(double v, double x, double m, double k)
 {
     double w2 = k / m;
     double e = (m / 2) * ((v * v) + (w2 * x * x));
-    printf("Calcolo energia meccanica E=%lf\t ( x=%lf\tv=%lf\tm=%lf\tk=%lf )\n", e, x, v, m, k);
 
     return e;
 }
 
-// DIFFERENT ALGOS TO CALCULATE DIFFERENTIAL EQUATIONS
+//10
+// 0.5
+// 5
+//
+
+int *create_dt_step(double T, double dtMax, double ndt)
+{
+}
+// ========== ALGORITHMS ===========
 
 char *Eulero(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
 {
+
+    printf("START Eulero: T=%f, dt=%f, file_name=%s, file_mode=%s, save_all=%d \n", T, dt, file_name, file_mode, save_all);
+    printOscillator(osc);
+
     FILE *fptr;
     if (save_all)
     {
@@ -64,7 +78,7 @@ char *Eulero(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_m
     for (int i = 0; i <= N; i++)
     {
 
-        dE = getMechanicalEnergy(v, x, osc->m, osc->k) - osc->E0;
+        dE = fabs(getMechanicalEnergy(v, x, osc->m, osc->k) - osc->E0) / osc->E0;
 
         if (save_all)
             fprintf(fptr, "%lf,%lf,%lf,%lf\n", i * dt, x, v, dE);
@@ -80,14 +94,18 @@ char *Eulero(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_m
         fclose(fptr);
     }
 
-    char *last_line = malloc(sizeof(char));
-    snprintf(last_line, 1000 * sizeof(double) + 3, "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+    char *last_line = malloc(100 * sizeof(char));
+    snprintf(last_line, 10 * sizeof(double), "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+
+    printf("END Eulero: T=%f, x=%f, v=%f, dE=%f \n\n", N * dt, x, v, dE);
 
     return last_line;
 }
 
 char *EuleroCromer(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
 {
+    printf("START EuleroCromer: T=%f, dt=%f, file_name=%s, file_mode=%s, save_all=%d \n", T, dt, file_name, file_mode, save_all);
+    printOscillator(osc);
 
     FILE *fptr;
     if (save_all)
@@ -104,7 +122,7 @@ char *EuleroCromer(OSCILLATOR *osc, double T, double dt, char *file_name, char *
 
     for (int i = 0; i <= N; i++)
     {
-        dE = getMechanicalEnergy(v, x, osc->m, osc->k) - osc->E0;
+        dE = fabs(getMechanicalEnergy(v, x, osc->m, osc->k) - osc->E0) / osc->E0;
 
         if (save_all)
             fprintf(fptr, "%lf,%lf,%lf,%lf\n", i * dt, x, v, dE);
@@ -119,14 +137,19 @@ char *EuleroCromer(OSCILLATOR *osc, double T, double dt, char *file_name, char *
         fclose(fptr);
     }
 
-    char *last_line = malloc(sizeof(char));
-    snprintf(last_line, 5 * sizeof(double) + 3, "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+    char *last_line = malloc(100 * sizeof(char));
+    snprintf(last_line, 10 * sizeof(double), "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+    printf("END Cromer: T=%f, x=%f, v=%f, dE=%f \n\n", N * dt, x, v, dE);
 
     return last_line;
 }
 
 char *LeapFrog(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
 {
+
+    printf("START LeapFrog: T=%f, dt=%f, file_name=%s, file_mode=%s, save_all=%d \n", T, dt, file_name, file_mode, save_all);
+    printOscillator(osc);
+
     FILE *fptr;
     if (save_all)
     {
@@ -143,7 +166,7 @@ char *LeapFrog(OSCILLATOR *osc, double T, double dt, char *file_name, char *file
 
     for (int i = 0; i <= N; i++)
     {
-        dE = getMechanicalEnergy(v - acc(osc, x, dt / 2), x, osc->m, osc->k) - osc->E0;
+        dE = fabs(getMechanicalEnergy(v - acc(osc, x, dt / 2), x, osc->m, osc->k) - osc->E0) / osc->E0;
         if (save_all)
             fprintf(fptr, "%lf,%lf,%lf,%lf\n", i * dt, x, v - acc(osc, x, dt / 2), dE);
 
@@ -157,11 +180,18 @@ char *LeapFrog(OSCILLATOR *osc, double T, double dt, char *file_name, char *file
         fclose(fptr);
     }
 
-    char *last_line = malloc(sizeof(char));
-    snprintf(last_line, 5 * sizeof(double) + 3, "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+    char *last_line = malloc(100 * sizeof(char));
+    snprintf(last_line, 10 * sizeof(double), "%lf,%lf,%lf,%lf\n", N * dt, x, v, dE);
+    printf("END LeapFrog: T=%f, x=%f, v=%f, dE=%f \n\n", N * dt, x, v, dE);
 
     return last_line;
 }
+
+char *(*f)(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all);
+
+char *(*algorithms[3])() = {Eulero, EuleroCromer, LeapFrog};
+
+// ========== END ALGORITHMS ===========
 
 void analyze_by_integration_step(char *(*f)(), OSCILLATOR *osc, double T, double dt[], int dt_len, char *file_name)
 {
@@ -204,25 +234,29 @@ OSCILLATOR *initOscillator()
 int main(int argc, char *argv[])
 {
 
-    OSCILLATOR *osc = initOscillator();
+    if (argc != 4)
+    {
+        fprintf(stderr, "usage: %s | algo(0=E,1=EC,2=LF) | T | dtMax | num_dt  \n", argv[0]);
+        return (EXIT_FAILURE);
+    }
 
-    double T, dt;
-    scanf("T=%lf\n", &T);
-    scanf("dt=%lf", &dt);
+    int n_algo;
+    double T, dtMax, num_dt;
 
-    double dt_step[] = {
-        0.1,
-        0.05,
-        0.01,
-    };
+    n_algo = atoi(argv[1]);
+    T = atof(argv[2]);
+    dtMax = atof(argv[3]);
+    num_dt = atof(argv[4]);
 
-    Eulero(osc, T, dt, "eulero.csv", "wb", 1);
-    EuleroCromer(osc, T, dt, "eulerocromer.csv", "wb", 1);
-    LeapFrog(osc, T, dt, "leapfrog.csv", "wb", 1);
+    int dt_step[] =
 
-    analyze_by_integration_step(&Eulero, osc, T, dt_step, 3, "step_eulero.csv");
-    analyze_by_integration_step(&EuleroCromer, osc, T, dt_step, 3, "step_cromer.csv");
-    analyze_by_integration_step(&LeapFrog, osc, T, dt_step, 3, "step_leapfrog.csv");
+        OSCILLATOR *osc = initOscillator();
+
+    // Eulero(osc, T, dt, "eulero.csv", "wb", 1);
+    // EuleroCromer(osc, T, dt, "eulerocromer.csv", "wb", 1);
+    // LeapFrog(osc, T, dt, "leapfrog.csv", "wb", 1);
+
+    analyze_by_integration_step(algorithms[0], osc, T, dt_step, 8, "result.csv");
 
     return 0;
 }
