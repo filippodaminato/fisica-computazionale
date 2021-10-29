@@ -248,9 +248,10 @@ int main(int argc, char *argv[])
     dtMax = atof(argv[3]);
     num_dt = atof(argv[4]);
 
-    int dt_step[] =
+    // SONO ARRIVATO QUI Da finire, manca algo
+    int dt_step[] = create_dt_step(T, dtMax, num_dt);
 
-        OSCILLATOR *osc = initOscillator();
+    OSCILLATOR *osc = initOscillator();
 
     // Eulero(osc, T, dt, "eulero.csv", "wb", 1);
     // EuleroCromer(osc, T, dt, "eulerocromer.csv", "wb", 1);
