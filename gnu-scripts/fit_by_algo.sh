@@ -44,24 +44,29 @@ set style line 6 \
 f(x) = m * x + q       
 g(x) = k * x + z  
 h(x) = h * x + c  
+z(x) = t * x + b  
 
-fit f(x) 'csv/RECAP_step_eulero.csv' u (log($1)):(log($5)) via m, q
-fit g(x) 'csv/RECAP_step_cromer.csv' u (log($1)):(log($5)) via k, z
-fit h(x) 'csv/RECAP_step_leapfrog.csv' u (log($1)):(log($5)) via h, c
+fit f(x) 'csv/RECAP_eulero.csv' u (log($1)):(log($5)) via m, q
+fit g(x) 'csv/RECAP_eulerocromer.csv' u (log($1)):(log($5)) via k, z
+fit h(x) 'csv/RECAP_leapfrog.csv' u (log($1)):(log($5)) via h, c
+fit z(x) 'csv/RECAP_VerletVelocity.csv' u (log($1)):(log($5)) via t, b
 
 f(x) = exp(m * log(x) + q )
 g(x) = exp(k * log(x) + z )
 h(x) = exp(h * log(x) + c )
+z(x) = exp(t * log(x) + b )
+
+plot 'csv/RECAP_eulero.csv' u 1:5 with linespoints linestyle 1 title 'Eulero' 
+replot f(x) linestyle 1 title 'Fit Eulero'
+
+replot 'csv/RECAP_eulerocromer.csv' u 1:5  with linespoints linestyle 2 title 'eulerocromer'
+replot g(x) linestyle 2 title 'Fit eulerocromer'
+
+replot 'csv/RECAP_leapfrog.csv' u 1:5 with linespoints linestyle 3 title 'LeapFrog'
+replot h(x) linestyle 3 title 'Fit LeapFrog'
+
+replot 'csv/RECAP_VerletVelocity.csv' u 1:5 with linespoints linestyle 4 title 'VerletVelocity'
+replot h(x) linestyle 4 title 'Fit VerletVelocity'
 
 
-
-
-plot 'csv/RECAP_step_eulero.csv' u 1:5 with linespoints linestyle 1 title 'Eulero' 
-replot f(x) linestyle 2 title 'Fit Eulero'
-
-replot 'csv/RECAP_step_cromer.csv' u 1:5  with linespoints linestyle 3 title 'Cromer'
-replot g(x) linestyle 3 title 'Fit Cromer'
-
-replot 'csv/RECAP_step_leapfrog.csv' u 1:5 with linespoints linestyle 5 title 'LeapFrog'
-replot h(x) linestyle 6 title 'Fit LeapFrog'
 

@@ -27,3 +27,19 @@ set style line 3 \
     pointtype 7 pointsize 0 
 
 replot 'csv/leapfrog.csv' using 1:4 with linespoints linestyle 3 title 'LeapFrog'
+
+#Plotting Leap Frog
+set style line 4 \
+    linecolor rgb 'orange' \
+    linetype -1 linewidth 2 \
+    pointtype 7 pointsize 0 
+
+replot 'csv/VerletPosition.csv' using 1:4 with linespoints linestyle 4 title 'VerletPosition'
+
+#Plotting Leap Frog
+set style line 5 \
+    linecolor rgb 'black' \
+    linetype -1 linewidth 2 \
+    pointtype 7 pointsize 0 
+
+replot 'csv/VerletVelocity.csv' using 1:4 with linespoints linestyle 5 title 'VerletVelocity'
