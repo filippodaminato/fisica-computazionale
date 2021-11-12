@@ -104,10 +104,17 @@ Trajectory *RK2(Vector v, double T, double dt)
     return tj;
 }
 
-int analyzePeriod(Trajectory tj, char axis, double t_error)
+/* 
+    tj = traiettoria
+    axis = asse da analizzare
+    t_error = errore relativo massimo (serve per calcolare il transiente)
+
+    return: [ t1_medio, t2_medio, transiente ]
+*/
+int *analyzePeriod(Trajectory tj, char axis, double t_error)
 {
     int counter = 0;                                                // numero di mezzi periodi
-    double *traj;                                                   //salvo la traiettoria in base all'asse scelto in input (axis)
+    double *traj;                                                   // salvo la traiettoria in base all'asse scelto in input (axis)
     double *inversion_t = (double *)calloc(tj.len, sizeof(double)); // array di tempi nei quali avviene il cambio di segno
 
     switch (axis)
@@ -124,7 +131,7 @@ int analyzePeriod(Trajectory tj, char axis, double t_error)
 
     default:
         fprintf(stderr, "ERROR: Asse non valido");
-        return EXIT_FAILURE;
+        return NULL;
         break;
     }
 
@@ -132,7 +139,7 @@ int analyzePeriod(Trajectory tj, char axis, double t_error)
     for (int i = 1; i < tj.len; i++)
     {
         if (traj[i] * traj[i - 1] <= 0)
-            inversion_t[counter++] = tj.dt * (2 * i - 1) / 2;
+            inversion_t[counter++] = tj.dt * (2 * i - 1) / 2; // mi salvo il tempo = (t2 - t1) / 2
     }
 
     if (counter % 2 != 0)
@@ -150,21 +157,53 @@ int analyzePeriod(Trajectory tj, char axis, double t_error)
     {
         current_t = (inversion_t[i] - inversion_t[i - 2]);
 
-        if (fabs(current_t - t1_mean) / t1_mean <= t_error)
+        if (fabs(current_t - t1_mean) / t1_mean <= t_error) // se errore relativo minore del errore limite
             end = !end;
         else
             i++;
     }
 
+    //tempo transiente
     double t_transient = inversion_t[i - 2];
 
     // Ricalcolo tempo medio partendo dalla parte stazionaria
-
     double t2_mean = 2 * (inversion_t[counter - 1] - inversion_t[i - 2]) / (counter - i + 2);
 
     fprintf(stderr, "Period on axis: %c \n T1: %.10lf \t Ttran: %.10lf \t T2: %.10lf \n", axis, t1_mean, t_transient, t2_mean);
 
-    return 1;
+    int *res = (int *)calloc(3, sizeof(int));
+    res[0] = t1_mean;
+    res[1] = t2_mean;
+    res[2] = t_transient;
+
+    return res;
+}
+
+void analyzeByC(Vector v, double T, double dt, int c1, int c2)
+{
+    int len = abs(c2 - c1);
+
+    FILE *fptr;
+    Trajectory *tj[len];
+
+    fptr = fopen("analyze_by_c.out", "wo");
+    fprintf(fptr, "\n#Trajectory by c without transient time\n#T\t,x\t,y\t,z\n");
+
+    for (int i = 0; i < len; i++)
+    {
+        c = c1 + i;
+        tj[i] = RK2(v, T, dt);
+        // int *res = analyzePeriod(*tj[i], 'x', 0.01);
+
+        for (int x = 150 / dt; x < tj[i]->len; x++)
+        {
+            fprintf(fptr, "%.10lf,%.10lf,%.10lf,%.10lf\n", tj[i]->dt * x, tj[i]->x[x], tj[i]->y[x], tj[i]->z[x]);
+        }
+
+        fprintf(fptr, "\n\n");
+    }
+
+    fclose(fptr);
 }
 
 int main(int argc, char const *argv[])
@@ -194,84 +233,8 @@ int main(int argc, char const *argv[])
     analyzePeriod(*tj, 'y', 0.01);
     analyzePeriod(*tj, 'z', 0.01);
 
+    // usare per studiare regime staizonario
+    //analyzeByC(*o, T, dt, 2, 11);
+
     return 0;
 }
-
-// void printStatus(Vector o, double t)
-// {
-//     fprintf(stdout, "%.10lf,%.10lf,%.10lf,%.10lf\n", t, o.x, o.y, o.z);
-// }
-
-// double Ttransient(Trajectory tj, double Tmean, double error)
-// {
-
-//     int i = 1;
-//     int end = 0;
-
-//     int change_counter = 0; //contatore di cambio di segno
-//     int t_start = 0;
-
-//     double current_t;
-
-//     while (i < tj.len)
-//     {
-
-//         if (tj.x[i] * tj.x[i - 1] <= 0)
-//         {
-//             if (change_counter == 0)
-//             {
-//                 //primo cambio di segno
-//                 change_counter++;
-//                 t_start = i; // aggiorno indice inizio periodo da valutare
-//             }
-//             else if (change_counter == 3)
-//             {
-//                 //3 cambi di segno => fine periodo
-//                 current_t = (tj.dt * (i - t_start));
-
-//                 if (fabs(Tmean - current_t) <= error)
-//                     return tj.dt * t_start; // ritorno il tempo trascorso fino all'inizio del primo periodo valido
-//                 else
-//                     t_start = i; // aggiorno indice inizio periodo da valutare
-//             }
-//             else
-//                 change_counter++;
-//         }
-
-//         i++;
-//     }
-// }
-
-// double Tmean(Trajectory tj)
-// {
-//     int i_start = 1; // index del dt (dt[i_start])
-//     int end = 0;     // indica se ho trovato l'inizio del periodo
-
-//     // cerco l'inizio del periodo
-//     while (i_start < tj.len && !end)
-//     {
-//         if (tj.x[i_start] * tj.x[i_start - 1] <= 0)
-//             end = !end;
-//         else
-//             i_start++;
-//     }
-
-//     // scorro la traiettria e conto quanti mezzi periodi
-//     int counter = 0; // contatore di quanti mezzi periodi trovo
-//     int i = i_start;
-
-//     for (; i < tj.len; i++)
-//     {
-//         if (tj.x[i] * tj.x[i - 1] <= 0)
-//             counter++;
-//     }
-
-//     double t_mean = 2 * tj.dt * (i - i_start);
-
-//     if (i % 2 == 0)
-//         t_mean /= counter;
-//     else
-//         t_mean /= (counter - 1);
-
-//     return t_mean;
-// }
