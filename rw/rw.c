@@ -71,7 +71,6 @@ void RW(int tmax, int n_tj, int b)
         tjs[i] = initTrajectory(tmax);
     }
 
-    Long pos = 0;
     int len = 0;
     int m = b;
 
@@ -92,13 +91,16 @@ void RW(int tmax, int n_tj, int b)
     }
 
     // RW + histo
+    Long pos = 0;
     for (int z = 1; z < n_tj + 1; z++)
     {
         m = b;
         int f = 0;
-        for (int i = 0; i < tmax; i++)
+        for (int i = 1; i < tmax; i++)
         {
             pos += (drand48() < 0.5) ? 1 : -1;
+
+            fprintf(stderr, "asd ok %d %d %lld \n", z, i, pos);
 
             tjs[0]->x[i] += pos;
             tjs[1]->x[i] += pos * pos;
@@ -106,8 +108,9 @@ void RW(int tmax, int n_tj, int b)
 
             if (m == i)
             {
-                histo[f++][z + pos]++;
+                histo[f][i + pos] += 1;
                 m *= b;
+                f++;
             }
         }
     }
