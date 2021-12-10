@@ -129,20 +129,12 @@ Node **initGrid(int L, double p)
     return res;
 }
 
-void **initDynamicGrid(int L, double pi, double pf, double dp)
+void **initDynamicGrid(int L, double pi, double pf, double dp, int samples)
 {
     // creating the grid structure
-    Node **res = (Node **)malloc(L * sizeof(Node *));
-
-    for (int i = 0; i < L; i++)
-    {
-        res[i] = (Node *)malloc(L * sizeof(Node));
-        for (int z = 0; z < L; z++)
-            res[i][z].value = unset;
-    }
+    Node **res = initGrid(L, pi);
 
     // filling the grid with "len" holes
-
     int len, len_pre, x, y, i;
     len_pre = 0;
 
@@ -164,7 +156,7 @@ void **initDynamicGrid(int L, double pi, double pf, double dp)
             if (res[y][x].value == unset)
             {
                 res[y][x].value = empty;
-                res[y][x].parent = NULL;
+                res[y][x].parent = &res[y][x];
                 i++;
             }
         }
@@ -172,11 +164,24 @@ void **initDynamicGrid(int L, double pi, double pf, double dp)
         len = (int)(L * L * dp + 0.5);
 
         printGrid(res, L);
-
-        // saveGrid(res, L, "saving.txt", "a");
     }
 
     return 0;
+}
+
+int numberOfCluster(Node **grid, int L)
+{
+    int count = 0;
+    for (int y = 0; y < L; y++)
+    {
+        for (int x = 0; x < L; x++)
+        {
+            if (grid[y][x].parent == &grid[y][x])
+                count++;
+        }
+    }
+
+    return count;
 }
 
 void setLabel(Node **grid, int L)
@@ -241,42 +246,83 @@ void setLabel(Node **grid, int L)
             }
         }
     }
-}
 
-int numberOfCluster(Node **grid, int L)
-{
-    int count = 1;
+    int cnt = 1;
     for (int y = 0; y < L; y++)
     {
         for (int x = 0; x < L; x++)
         {
             if (grid[y][x].parent == &grid[y][x])
-                count++;
+            {
+                grid[y][x].value = cnt++;
+                fprintf(stderr, "Find\n");
+            }
+        }
+    }
+}
+
+int percolating(Node **grid, int L)
+{
+    for (int i = 0; i < L; i++)
+    {
+        if (value(&grid[0][i]) != unset)
+        {
+            for (int z = 0; z < L; z++)
+            {
+                int val = value(&grid[0][i]);
+                if (val == value(&grid[L - 1][z]))
+                    return val;
+            }
         }
     }
 
-    return count;
+    return 0;
 }
 
-int meansize(Node **grid, int L, int n_fath)
+int *analyzeGrid(Node **grid, int L)
 {
-}
-
-void analyzeGrid(Node **grid, int L)
-{
-
+    int *res = (int *)malloc(5 * sizeof(int));
     int n_clst = numberOfCluster(grid, L);
-    int sizes[n_clst];
+
+    int *clst_sizes = (int *)malloc(sizeof(int) * n_clst);
+
+    int holes_count = 0;
+    int s_tot = 0;
 
     for (int y = 0; y < L; y++)
     {
         for (int x = 0; x < L; x++)
         {
             int val = value(&grid[x][y]);
-            if (val > empty)
-                sizes[val - 1]++;
+            if (val > unset)
+                clst_sizes[val - 1]++;
+
+            if (val == unset)
+                holes_count++;
         }
     }
+
+    for (int i = 0; i < n_clst; i++)
+        s_tot += clst_sizes[i] * clst_sizes[i];
+
+    int percol = percolating(grid, L);
+    int s_percol = 0;
+
+    if (percol != unset)
+        s_percol = clst_sizes[percol - 1];
+
+    res[0] = holes_count;
+    res[1] = (percol != unset) ? 1 : 0;
+    ;
+    res[2] = s_percol;
+    res[3] = s_tot;
+    res[4] = n_clst;
+
+    fprintf(stderr, "Holes\tPercol\tSPercol\tStot\tNcltr\n");
+    fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t\n\n", res[0], res[1], res[2], res[3], res[4]);
+    free(clst_sizes);
+
+    return res;
 }
 
 int main(int argc, char const *argv[])
@@ -301,17 +347,14 @@ int main(int argc, char const *argv[])
 
     Node **grid = initGrid(L, p);
     printGrid(grid, L);
-
     setLabel(grid, L);
-
     printGrid(grid, L);
 
-    fprintf(stderr, "N cluster: %d\n", numberOfCluster(grid, L));
-    // initDynamicGrid(L, p_start, p_end, dp);
+    // initDynamicGrid(L, p_start, p_end, dp, sample);
+
+    int *res = analyzeGrid(grid, L);
 
     printf("%d \n", counter);
 
     return 0;
 }
-
-// L^2 * p = N
