@@ -9,6 +9,7 @@ int current_label = 1;
 #define empty -1
 #define unset 0
 
+typedef unsigned long long int big;
 typedef struct Node Node;
 
 struct Node
@@ -93,6 +94,21 @@ void initRand()
     srand48(seed);
 }
 
+Node **voidGird(int L)
+{
+    // creating the grid structure
+    Node **res = (Node **)malloc(L * sizeof(Node *));
+
+    for (int i = 0; i < L; i++)
+    {
+        res[i] = (Node *)malloc(L * sizeof(Node));
+        for (int z = 0; z < L; z++)
+            res[i][z].value = unset;
+    }
+
+    return res;
+}
+
 Node **initGrid(int L, double p)
 {
 
@@ -127,46 +143,6 @@ Node **initGrid(int L, double p)
     }
 
     return res;
-}
-
-void **initDynamicGrid(int L, double pi, double pf, double dp, int samples)
-{
-    // creating the grid structure
-    Node **res = initGrid(L, pi);
-
-    // filling the grid with "len" holes
-    int len, len_pre, x, y, i;
-    len_pre = 0;
-
-    len = (int)(L * L * pi + 0.5);
-
-    fprintf(stdout, "to: %d\n", (int)(((pf - pi) / dp) + 0.5));
-
-    for (int v = 0; v <= (int)(((pf - pi) / dp) + 0.5); v++)
-    {
-        i = 0;
-
-        fprintf(stdout, "len = %d , p = %f\n", len, pi + dp * v);
-
-        while (i < len)
-        {
-            x = (rand() % (L));
-            y = (rand() % (L));
-
-            if (res[y][x].value == unset)
-            {
-                res[y][x].value = empty;
-                res[y][x].parent = &res[y][x];
-                i++;
-            }
-        }
-
-        len = (int)(L * L * dp + 0.5);
-
-        printGrid(res, L);
-    }
-
-    return 0;
 }
 
 int numberOfCluster(Node **grid, int L)
@@ -247,16 +223,14 @@ void setLabel(Node **grid, int L)
         }
     }
 
+    // Rinomino tutti i father in modo tale che non ci siano buchi nella numerazione (tipo: 1,3,7 => 1,2,3)
     int cnt = 1;
     for (int y = 0; y < L; y++)
     {
         for (int x = 0; x < L; x++)
         {
             if (grid[y][x].parent == &grid[y][x])
-            {
                 grid[y][x].value = cnt++;
-                fprintf(stderr, "Find\n");
-            }
         }
     }
 }
@@ -279,9 +253,9 @@ int percolating(Node **grid, int L)
     return 0;
 }
 
-int *analyzeGrid(Node **grid, int L)
+big *analyzeGrid(Node **grid, int L)
 {
-    int *res = (int *)malloc(5 * sizeof(int));
+    big *res = (big *)malloc(5 * sizeof(big));
     int n_clst = numberOfCluster(grid, L);
 
     int *clst_sizes = (int *)malloc(sizeof(int) * n_clst);
@@ -311,18 +285,74 @@ int *analyzeGrid(Node **grid, int L)
     if (percol != unset)
         s_percol = clst_sizes[percol - 1];
 
-    res[0] = holes_count;
-    res[1] = (percol != unset) ? 1 : 0;
-    ;
-    res[2] = s_percol;
-    res[3] = s_tot;
-    res[4] = n_clst;
+    res[0] = (big)holes_count;
+    res[1] = (big)(percol != unset) ? 1 : 0;
+    res[2] = (big)s_percol;
+    res[3] = (big)s_tot;
+    res[4] = (big)n_clst;
 
-    fprintf(stderr, "Holes\tPercol\tSPercol\tStot\tNcltr\n");
-    fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t\n\n", res[0], res[1], res[2], res[3], res[4]);
+    // fprintf(stderr, "Holes\tPercol\tSPercol\tStot\tNcltr\n");
+    // fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t\n\n", res[0], res[1], res[2], res[3], res[4]);
     free(clst_sizes);
 
     return res;
+}
+
+void **initDynamicGrid(int L, double pi, double pf, double dp, int samples)
+{
+    int len, x, y, i;
+
+    int run = (int)(((pf - pi) / dp) + 0.5) + 1;
+
+    fprintf(stderr, "Run: %d\n", run);
+    big **res = (big **)malloc(run * sizeof(big *));
+
+    for (int i = 0; i < run; i++)
+        res[i] = (big *)malloc(5 * sizeof(big));
+
+    for (int s = 0; s < samples; s++)
+    {
+
+        Node **grd = voidGird(L);      // creating void grid structure
+        len = (int)(L * L * pi + 0.5); //quantità di buchi da fare
+
+        // per ogni probabilità
+        for (int v = 0; v < run; v++)
+        {
+            i = 0;
+
+            // cerco delle posizioni random, se queste sono "unset" ci faccio un buco "empty"
+            while (i < len)
+            {
+                x = (rand() % (L));
+                y = (rand() % (L));
+
+                if (grd[y][x].value == unset)
+                {
+                    grd[y][x].value = empty;
+                    grd[y][x].parent = &grd[y][x];
+                    i++;
+                }
+            }
+
+            len = (int)(L * L * dp + 0.5);
+
+            setLabel(grd, L);
+
+            big *datas = analyzeGrid(grd, L);
+            res[v][0] += datas[0];
+            res[v][1] += datas[1];
+            res[v][2] += datas[2];
+            res[v][3] += datas[3];
+            res[v][4] += datas[4];
+        }
+    }
+
+    fprintf(stderr, "L\tP\t\tHoles\tPercol\tSPercol\tStot\tNcltr\n");
+    for (int i = 0; i < run; i++)
+        fprintf(stderr, "%d\t%f\t%lld\t%lld\t%lld\t%lld\t%lld\t\n\n", L, pi + (dp * i), res[i][0], res[i][1], res[i][2], res[i][3], res[i][4]);
+
+    return 0;
 }
 
 int main(int argc, char const *argv[])
@@ -343,18 +373,9 @@ int main(int argc, char const *argv[])
 
     fprintf(stdout, "Config:  L = %d | pi = %f | pf = %f | dp = %f | #sample = %d \n", L, p_start, p_end, dp, sample);
 
-    double p = p_start;
+    initDynamicGrid(L, p_start, p_end, dp, sample);
 
-    Node **grid = initGrid(L, p);
-    printGrid(grid, L);
-    setLabel(grid, L);
-    printGrid(grid, L);
-
-    // initDynamicGrid(L, p_start, p_end, dp, sample);
-
-    int *res = analyzeGrid(grid, L);
-
-    printf("%d \n", counter);
+    printf("Tot. Labeling iterations %d \n", counter);
 
     return 0;
 }
