@@ -60,6 +60,8 @@ void easy_RW(int tmax)
     }
 
     saveTrajectory(*tj, "tj.out", "a");
+
+    free(tj);
 }
 
 void RW(int tmax, int n_tj, int b)
@@ -100,7 +102,7 @@ void RW(int tmax, int n_tj, int b)
         {
             pos += (drand48() < 0.5) ? 1 : -1;
 
-            fprintf(stderr, "asd ok %d %d %lld \n", z, i, pos);
+            // fprintf(stderr, "asd ok %d %d %lld \n", z, i, pos);
 
             tjs[0]->x[i] += pos;
             tjs[1]->x[i] += pos * pos;
@@ -167,7 +169,12 @@ int main(int argc, char const *argv[])
 
     fprintf(stderr, "Config:\n\tTmax: %d, N_traj: %d, B: %d\n", tmax, n_tj, b);
 
-    RW(tmax, n_tj, b);
+    for (int i = 0; i < 10; i++)
+    {
+        easy_RW(tmax);
+    }
+
+    // RW(tmax, n_tj, b);
 
     return 0;
 }
