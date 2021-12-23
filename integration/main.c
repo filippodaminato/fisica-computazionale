@@ -18,6 +18,46 @@ typedef struct OSCILLATOR
     double m, k, v0, x0, E0, w2;
 } OSCILLATOR;
 
+OSCILLATOR sum(OSCILLATOR a, OSCILLATOR b)
+{
+    OSCILLATOR res;
+    res.v0 = a.v0 + b.v0;
+    res.x0 = a.x0 + b.x0;
+    res.k = a.k;
+    res.m = a.k;
+    res.w2 = a.w2;
+    res.E0 = a.E0;
+
+    return res;
+}
+
+OSCILLATOR sdot(OSCILLATOR a, double b)
+{
+    OSCILLATOR res;
+    res.v0 = a.v0 * b;
+    res.x0 = a.x0 * b;
+    res.k = a.k;
+    res.m = a.k;
+    res.w2 = a.w2;
+    res.E0 = a.E0;
+    return res;
+}
+
+OSCILLATOR step(OSCILLATOR a, double dt)
+{
+    OSCILLATOR res;
+
+    double acc = -a.w2 * a.x0;
+    res.x0 = a.v0 * dt;
+    res.v0 = acc * dt;
+    res.k = a.k;
+    res.m = a.k;
+    res.w2 = a.w2;
+    res.E0 = a.E0;
+
+    return res;
+}
+
 char *filepath(char *filename)
 {
     char *str = malloc(300 * sizeof(char));
@@ -283,33 +323,112 @@ char *VerletPosition(OSCILLATOR *osc, double T, double dt, char *file_name, char
     return last_line;
 }
 
-// char *RungeKutta4(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
-// {
+char *RungeKutta2(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
+{
 
-//     double rk[2][4];
-//     double rk_a[4] = {0, 0.5, 0.5, 1};
-//     double rk_b[4] = {1 / 6, 1 / 3, 1 / 3, 1 / 6};
+    printf("START RungeKutta2: T=%f, dt=%f, file_name=%s, file_mode=%s, save_all=%d \n", T, dt, file_name, file_mode, save_all);
 
-//     rk[0][0] = osc->v0 * dt;
-//     rk[1][0] = acc(osc, osc->x0, dt);
+    FILE *fptr;
+    if (save_all)
+    {
+        fptr = fopen(filepath(file_name), file_mode);
+        fprintf(fptr, "#t,x,v,dE\n");
+    }
 
-//     int N = (int)(T / dt + 0.5);
+    double dE;
+    int N = (int)(T / dt + 0.5);
 
-//     for (int i = 0; i < N; i++)
-//     {
+    OSCILLATOR res, f1, f2;
+    res.E0 = osc->E0;
+    res.x0 = osc->x0;
+    res.v0 = osc->v0;
+    res.k = osc->k;
+    res.m = osc->m;
+    res.w2 = osc->w2;
 
-//         for (int z = 1; z < 4; z++)
-//         {
-//             rk[0][z] = rk[0][0] + rk_a[z]*rk[1][z-1]*dt
-//         }
-//     }
-// }
+    for (int i = 0; i <= N; i++)
+    {
+
+        dE = fabs(getMechanicalEnergy(res.v0, res.x0, res.m, res.k) - osc->E0) / osc->E0;
+
+        f1 = step(res, dt * 0.5);
+        f2 = step(sum(res, f1), dt);
+        res = sum(res, f2);
+
+        if (save_all)
+            fprintf(fptr, "%lf,%lf,%lf,%lf\n", i * dt, res.x0, res.v0, dE);
+    }
+
+    if (save_all)
+    {
+        fprintf(fptr, "\n\n");
+        fclose(fptr);
+    }
+
+    char *last_line = malloc(100 * sizeof(char));
+    snprintf(last_line, 10 * sizeof(double), "%lf,%lf,%lf,%lf\n", N * dt, res.x0, res.v0, dE);
+    printf("END RungeKutta2: T=%f, x=%f, v=%f, dE=%f \n\n", N * dt, res.x0, res.v0, dE);
+
+    return last_line;
+}
+
+char *RungeKutta4(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all)
+{
+
+    printf("START RungeKutta4: T=%f, dt=%f, file_name=%s, file_mode=%s, save_all=%d \n", T, dt, file_name, file_mode, save_all);
+
+    FILE *fptr;
+    if (save_all)
+    {
+        fptr = fopen(filepath(file_name), file_mode);
+        fprintf(fptr, "#t,x,v,dE\n");
+    }
+
+    double dE;
+    int N = (int)(T / dt + 0.5);
+
+    OSCILLATOR res, f1, f2, f3, f4;
+    res.E0 = osc->E0;
+    res.x0 = osc->x0;
+    res.v0 = osc->v0;
+    res.k = osc->k;
+    res.m = osc->m;
+    res.w2 = osc->w2;
+
+    for (int i = 0; i <= N; i++)
+    {
+
+        dE = fabs(getMechanicalEnergy(res.v0, res.x0, res.m, res.k) - osc->E0) / osc->E0;
+
+        f1 = step(res, dt);
+        f2 = step(sum(res, sdot(f1, 0.5)), dt);
+        f3 = step(sum(res, sdot(f2, 0.5)), dt);
+        f4 = step(sum(res, f3), dt);
+
+        res = sum(res, sdot(sum(f1, sum(sdot(f2, 2), sum(sdot(f3, 2), f4))), 1 / 6.));
+
+        if (save_all)
+            fprintf(fptr, "%lf,%lf,%lf,%lf\n", i * dt, res.x0, res.v0, dE);
+    }
+
+    if (save_all)
+    {
+        fprintf(fptr, "\n\n");
+        fclose(fptr);
+    }
+
+    char *last_line = malloc(100 * sizeof(char));
+    snprintf(last_line, 10 * sizeof(double), "%lf,%lf,%lf,%lf\n", N * dt, res.x0, res.v0, dE);
+    printf("END RungeKutta4: T=%f, x=%f, v=%f, dE=%f \n\n", N * dt, res.x0, res.v0, dE);
+
+    return last_line;
+}
 
 char *(*f)(OSCILLATOR *osc, double T, double dt, char *file_name, char *file_mode, int save_all);
 
-int algorithms_len = 5;
-char *(*algorithms[5])() = {Eulero, EuleroCromer, LeapFrog, VerletVelocity, VerletPosition};
-char *str_algorithms[5] = {"eulero.csv", "eulerocromer.csv", "leapfrog.csv", "VerletVelocity.csv", "VerletPosition.csv"};
+const int algorithms_len = 7;
+char *(*algorithms[algorithms_len])() = {Eulero, EuleroCromer, LeapFrog, VerletVelocity, VerletPosition, RungeKutta2, RungeKutta4};
+char *str_algorithms[algorithms_len] = {"eulero.csv", "eulerocromer.csv", "leapfrog.csv", "VerletVelocity.csv", "VerletPosition.csv", "RungeKutta2.csv", "RungeKutta4.csv"};
 
 // ========== END ALGORITHMS ===========
 
@@ -358,7 +477,7 @@ int main(int argc, char *argv[])
 
     if (argc != 5)
     {
-        fprintf(stderr, "usage: %s | algo(0=E,1=EC,2=LF,3=VV,4=VP,-1=ALL_ALGO) | T | dtMax | num_dt  \n", argv[0]);
+        fprintf(stderr, "usage: %s | algo(0=E,1=EC,2=LF,3=VV,4=VP,5=K2,6=K4,-1=ALL_ALGO) | T | dtMax | num_dt  \n", argv[0]);
         return (EXIT_FAILURE);
     }
 

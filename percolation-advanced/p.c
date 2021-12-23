@@ -90,7 +90,7 @@ void initRand()
     fread(&seed, 4, 1, fl);
     fclose(fl);
 
-    fprintf(stdout, "Seed: %d \n", seed);
+    fprintf(stderr, "Seed: %d \n", seed);
     srand48(seed);
 }
 
@@ -187,13 +187,13 @@ void setLabel(Node **grid, int L)
                     {
                         if (value(&grid[y - 1][x]) < value(&grid[y][x]) || value(&grid[y][x]) == empty)
                         {
-                            grid[y][x].parent = &grid[y - 1][x];
-                            grid[y - 1][x].child = &grid[y][x];
+                            grid[y][x].parent = getFather(&grid[y - 1][x]); // &grid[y - 1][x];
+                            // grid[y - 1][x].child = &grid[y][x];
                         }
                         else
                         {
-                            grid[y - 1][x].parent = &grid[y][x];
-                            grid[y][x].child = &grid[y - 1][x];
+                            grid[y - 1][x].parent = getFather(&grid[y][x]); // &grid[y][x];
+                            // grid[y][x].child = &grid[y - 1][x];
                         }
 
                         changed = 1;
@@ -202,13 +202,13 @@ void setLabel(Node **grid, int L)
                     {
                         if (value(&grid[y][x - 1]) < value(&grid[y][x]) || value(&grid[y][x]) == empty)
                         {
-                            grid[y][x].parent = &grid[y][x - 1];
-                            grid[y][x - 1].child = &grid[y][x];
+                            grid[y][x].parent = getFather(&grid[y][x - 1]); // &grid[y][x - 1];
+                            // grid[y][x - 1].child = &grid[y][x];
                         }
                         else
                         {
-                            grid[y][x - 1].parent = &grid[y][x];
-                            grid[y][x].child = &grid[y][x - 1];
+                            grid[y][x - 1].parent = getFather(&grid[y][x]); // &grid[y][x];
+                            // grid[y][x].child = &grid[y][x - 1];
                         }
 
                         changed = 1;
@@ -291,10 +291,6 @@ big *analyzeGrid(Node **grid, int L)
     res[3] = (big)s_tot;
     res[4] = (big)n_clst;
 
-    // fprintf(stderr, "Holes\tPercol\tSPercol\tStot\tNcltr\n");
-    // fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t\n\n", res[0], res[1], res[2], res[3], res[4]);
-    free(clst_sizes);
-
     return res;
 }
 
@@ -348,9 +344,9 @@ void **initDynamicGrid(int L, double pi, double pf, double dp, int samples)
         }
     }
 
-    fprintf(stderr, "L\tP\t\tHoles\tPercol\tSPercol\tStot\tNcltr\n");
+    fprintf(stdout, "# L\tP\t\tSamples\tHoles\tPercol\tSPercol\tStot\tNcltr\n");
     for (int i = 0; i < run; i++)
-        fprintf(stderr, "%d\t%f\t%lld\t%lld\t%lld\t%lld\t%lld\t\n\n", L, pi + (dp * i), res[i][0], res[i][1], res[i][2], res[i][3], res[i][4]);
+        fprintf(stdout, "%d\t%f\t%d\t%lld\t%lld\t%lld\t%lld\t%lld\t\n\n", L, pi + (dp * i), samples, res[i][0], res[i][1], res[i][2], res[i][3], res[i][4]);
 
     return 0;
 }
@@ -359,7 +355,7 @@ int main(int argc, char const *argv[])
 {
     if (argc != 6)
     {
-        fprintf(stdout, "Usage: %s | L | p_start | p_end | dp | #sample \n", argv[0]);
+        fprintf(stderr, "Usage: %s | L | p_start | p_end | dp | #sample \n", argv[0]);
         exit(1);
     }
 
@@ -371,11 +367,11 @@ int main(int argc, char const *argv[])
     double dp = atof(argv[4]);
     int sample = atoi(argv[5]);
 
-    fprintf(stdout, "Config:  L = %d | pi = %f | pf = %f | dp = %f | #sample = %d \n", L, p_start, p_end, dp, sample);
+    fprintf(stderr, "Config:  L = %d | pi = %f | pf = %f | dp = %f | #sample = %d \n", L, p_start, p_end, dp, sample);
 
     initDynamicGrid(L, p_start, p_end, dp, sample);
 
-    printf("Tot. Labeling iterations %d \n", counter);
+    fprintf(stderr, "Tot. Labeling iterations %d \n", counter);
 
     return 0;
 }

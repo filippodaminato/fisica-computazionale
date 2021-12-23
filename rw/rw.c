@@ -169,12 +169,12 @@ int main(int argc, char const *argv[])
 
     fprintf(stderr, "Config:\n\tTmax: %d, N_traj: %d, B: %d\n", tmax, n_tj, b);
 
-    for (int i = 0; i < 10; i++)
-    {
-        easy_RW(tmax);
-    }
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     easy_RW(tmax);
+    // }
 
-    // RW(tmax, n_tj, b);
+    RW(tmax, n_tj, b);
 
     return 0;
 }
